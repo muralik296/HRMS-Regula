@@ -1,0 +1,211 @@
+<%- include("partials/header"); -%>
+    <style>
+        #scrollBtn {
+            display: none;
+            /* Hidden by default */
+            position: fixed;
+            /* Fixed/sticky position */
+            bottom: 20px;
+            /* Place the button at the bottom of the page */
+            right: 30px;
+            /* Place the button 30px from the right */
+            z-index: 99;
+            /* Make sure it does not overlap */
+            border: none;
+            /* Remove borders */
+            outline: none;
+            /* Remove outline */
+            color: white;
+            /* Text color */
+            cursor: pointer;
+            /* Add a mouse pointer on hover */
+            padding: 1px;
+            /* Some padding */
+            border-radius: 10px;
+            /* Rounded corners */
+            font-size: 20px;
+            /* Increase font size */
+        }
+
+        #scrollBtn:hover {
+            background-color: #555;
+            /* Add a dark-grey background on hover */
+        }
+    </style>
+    <div id="save"></div>
+    <div class="row">
+        <div class="col-sm-4">
+            <label for="nameOfEmployee">Employee Name</label>
+            <input class="form-control" type="text" name="nameOfEmployee" autocomplete="off"
+                value="<%-found.nameOfEmployee -%>" />
+        </div>
+        <!-- <br /> -->
+        <div class="col-sm-4">
+            <label for="employeeId">Employee ID</label>
+            <input class="form-control" type="text" name="employeeId" autocomplete="off"
+                value="<%- found.employeeId -%>" />
+        </div>
+        <div class="col-sm-4">
+            <br />
+            <button type="submit" class="btn btn-info btn-md shadow-none">Save</button>
+            <button class="btn btn-primary btn-md shadow-none" onclick="exportExcel()">Export</button>
+            <button class="btn btn-dark btn-md shadow-none"
+                onclick="window.location.href='/views/records'">Back</button>
+        </div>
+    </div>
+    <br />
+    <div class="row">
+        <div class="col-lg-4">
+            <div>
+                <br />
+                <label for="documentType">Type Of Document</label>
+                <input class="form-control" type="text" name="documentType" autocomplete="off"
+                    value="<%- found.documentType -%>" readonly />
+            </div>
+            <div>
+                <br />
+                <label for="documentClass">Document Class</label>
+                <input class="form-control" type="text" name="documentClass" list="classNames" autocomplete="off"
+                    value="<%- found.documentClass -%>" />
+
+                <datalist id="classNames">
+                    <% for (var i=0; i<documentClasses.length;i++){ %>
+                        <option value='<%- documentClasses[i] -%>'>
+                            <%= documentClasses[i] -%>
+                        </option>
+                        <% } %>
+                </datalist>
+            </div>
+            <br />
+            <% for (var j=0; j<images.length; j++){ %>
+                <img src=<%="data:image/png;base64," + String(images[j]) %> >
+
+            <% } %>
+            <% if (found.graphicImages){ %>
+                <% for (var k=0; k < Object.keys(found.graphicImages).length; k++){ %>
+                    <% const key = Object.keys(found.graphicImages)[k]; %>
+                    <img src=<%="data:image/png;base64," + String(found.graphicImages[key]) %> title="<%- key -%>" />
+                <% } %>
+            <% } %>
+        </div>
+        <div class="col-lg-8">
+            <table class="table">
+                <tbody>
+                    <th>Field Type</th>
+                    <th>Value</th>
+
+                    <% for (var i=0; i< Object.keys(dataFields).length; i++){ %>
+                        <% const fieldType=Object.keys(dataFields)[i]; %>
+                            <% const fieldValue=dataFields[Object.keys(dataFields)[i]] %>
+                                <tr>
+                                    <td>
+                                        <% if (fieldType.slice(-6)=='(LCID)' ){ %>
+                                            <%= fieldType %> <sup>*</sup>
+                                                <% }else{ %>
+                                                    <%= fieldType %>
+                                                        <% } %>
+                                    </td>
+                                    <td><input class=" form-control input_fields" type="text" name="<%= fieldType -%>"
+                                            value="<%= fieldValue -%>" />
+                                    </td>
+                                </tr>
+                                <% } %>
+
+                </tbody>
+            </table>
+            <em>* - LCID stands for Language Code Identifier, information presented in native language</em>
+            <br />
+
+        </div>
+    </div>
+
+    <button onclick="topFunction()" id="scrollBtn" title="Go to top">🔝</button>
+
+
+    <script type="text/javascript">
+        let dataFields = JSON.parse(`<%- JSON.stringify(dataFields) -%>`);
+        //Track changes made to the input fields and reflect changes to the dataFields Object
+        $(".input_fields").each(function () {
+            let element = $(this);
+            element.data("oldValue", element.val());
+            element.bind("propertychange change click keyup input paste", function (event) {
+                if (element.data("oldVal") != element.val()) {
+                    element.data("oldVal", element.val());
+                }
+                //Make Changes to the dataFields object
+                dataFields[this.name] = element.data("oldVal");
+            })
+        });
+
+        //SCROLL FUNCTIONALITY;
+        //Get the button:
+        var mybutton = document.getElementById("scrollBtn");
+
+        // When the user scrolls down 20px from the top of the document, show the button
+        window.onscroll = function () { scrollFunction() };
+
+        function scrollFunction() {
+            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+                mybutton.style.display = "block";
+            } else {
+                mybutton.style.display = "none";
+            }
+        }
+
+        // When the user clicks on the button, scroll to the top of the document
+        function topFunction() {
+            document.body.scrollTop = 0; // For Safari
+            document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+        }
+        // /export-excel-single-record/:id
+        const path = window.location.pathname;
+        let id = path.replace("/views/", "");
+        function exportExcel() {
+            const url = "/export_record/" + id;
+            $.ajax({
+                url: url,
+                type: "application/json",
+                method: "GET",
+                success: function (result) {
+                    console.log(result);
+                    window.open(url);
+                }
+            })
+        }
+
+        //Update AJAX request 
+        $(".btn-info").on("click", function () {
+            if (confirm("Are you sure you would like to save the new details? ")) {
+                const foundId = `<%= found._id %>`; //Passing the ID EJS
+                console.log(foundId);
+                $.ajax({
+                    url: "/records/" + foundId,
+                    type: "application/json",
+                    method: "PUT",
+                    data: {
+                        nameOfEmployee: $("input[name='nameOfEmployee']").val(),
+                        employeeId: $("input[name='employeeId']").val(),
+                        documentType: $("input[name='documentType'").val(),
+                        documentClass: $("input[name='documentClass'").val(),
+                        dataFields: JSON.stringify(dataFields)
+                    },
+                    complete: function () {
+                        console.log('Connected..')
+                    },
+                    success: function (result) {
+                        console.log(result);
+                        $("#save").html(`<div class='alert alert-success'>${result}</div>`).show().fadeOut('slow').delay(4000);
+                        // $('#save').fadeOut('slow').delay(2500);
+                    },
+                    error: function (err) {
+                        $("#save").html(`<div class='alert alert-danger'>${err.responseJSON.msg}</div>`);
+                        console.log(error);
+                    }
+                })
+            } else {
+                return
+            }
+        })
+    </script>
+
+    <%- include("partials/footer"); -%>

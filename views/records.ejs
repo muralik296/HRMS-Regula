@@ -1,0 +1,184 @@
+<%- include("partials/header"); -%>
+  <!-- <div id="viewer">
+    <marquee behavior="" direction="">The records will be deleted after 24 hours</marquee>
+  </div> -->
+  <!-- Our main table -->
+  <br>
+  <div class="row">
+
+
+    <div class="col-lg-2">
+      <select class="form-select shadow-none" name="exportOptions" id="exportOptions">
+        <option value="All">All</option>
+        <% for (var i=0; i<documentClasses.length; i++){ %>
+          <option name="Document Class" value="<%- documentClasses[i] -%>">
+            <%= documentClasses[i] %>
+          </option>
+          <% } %>
+      </select>
+    </div>
+
+    <div class="col-lg-6">
+      <div style="margin-top: 5px;" class="dateMenu">
+
+        <input type="checkbox" name="chooseDate">
+        <label for="chooseDate">Custom Date Range: </label>
+        
+
+      </div>
+      <div id="dateOptions" class="dateMenu" style="display: none;">
+        <label for="startDate">Start Date: </label>
+        <input name="startDate" type="date" min="<%- minDate -%>" max="<%- maxDate -%>"
+          value="<%- new Date().toISOString().substr(0,10) -%>">
+        <label for="endDate">End date: </label>
+        <input name="endDate" type="date" min="<%- minDate -%>" max="<%- maxDate -%>"
+          value="<%- new Date().toISOString().substr(0,10) -%>">
+      </div>
+    </div>
+
+  </div>
+
+  <br />
+  <button class="btn btn-sm btn-info shadow-none" id="exportButton" type="submit">Export All</button>
+  <button class="btn btn-sm btn-danger shadow-none" id="deleteAllButton" type="submit">Delete All</button>
+
+
+  <table id="records" class="table table-hover">
+
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Employee ID</th>
+        <th>Employee Name</th>
+        <th>Document Class</th>
+        <th>Date Added</th>
+        <th>View/Edit</th>
+        <th>Delete</th>
+        <th>Excel</th>
+      </tr>
+
+    </thead>
+
+    <tbody>
+      <%- include("tbody"); -%>
+    </tbody>
+  </table>
+  <script type="text/javascript">
+
+    let startDate = ""; //startDate
+    let endDate = ""; //endDate
+
+    $("#exportOptions").on("change", changeView);
+
+    $("input[name='startDate']").on("change", function () {
+      startDate = $(this).val();
+      changeView();
+    })
+
+    $("input[name='endDate']").on("change", function () {
+      endDate = $(this).val();
+      changeView();
+    })
+
+    $('#exportButton').click(function () {
+      let filteroption = $("#exportOptions").val();
+      // let startDate = $("input[name='startDate']").val();
+      // let endDate = $("input[name='endDate']").val();
+      let url = `/export_records/${filteroption}`
+      if (startDate && endDate) {
+        url = url + '?startDate=' + startDate + '&' + 'endDate=' + endDate
+      }
+
+      if (confirm(`Please note this will export all the ${filteroption} records . Click yes to proceed? `)) {
+        $.ajax({
+          url: url,
+          type: "application/json",
+          method: "POST",
+          beforeSend: function () {
+            $("#loader").show();
+          },
+          complete: function () {
+            $("#loader").hide();
+          },
+          success: function (response) {
+            // //Downloads the prepared CSV automatically
+            window.location.assign(`/${filteroption}_Records.xlsx`);
+          },
+          error: function (err) {
+            console.log(err);
+          }
+        })
+      }
+    });
+
+    $('#deleteAllButton').click(function () {
+      if (confirm(`Please note this will delete all the records . Click yes to proceed? `)) {
+        $.ajax({
+          url: '/records',
+          type: "application/json",
+          method: "DELETE",
+          beforeSend: function () {
+            $("#loader").show();
+          },
+          complete: function () {
+            $("#loader").hide();
+          },
+          success: function (response) {
+            console.log(response);
+            location.reload();
+          },
+          error: function (err) {
+            console.log(err);
+          }
+        })
+      }
+    });
+
+    // $("input[name='chooseDate']").on("click", pollRequestedDates);
+    $("input[name='startDate']").on("change", changeView);
+    $("input[name='endDate']").on("change", changeView);
+
+    $("input[name='chooseDate']").on("change", function () {
+      $("#dateOptions").toggle();
+      if (!($(this).is(':checked'))) { //if not checked
+
+        startDate = "";
+        endDate = "";
+
+      }
+      else {
+        startDate = $("input[name='startDate']").val(); //startDate
+        endDate = $("input[name='endDate']").val(); //endDate
+      }
+      changeView();
+    })
+
+
+    function changeView() {
+      // $("#dateOptions").show();
+      let filteroption = $("#exportOptions").val();
+      // startDate = $("input[name='startDate']").val();
+      // endDate = $("input[name='endDate']").val();
+      let url = `/views/records?documentClass=${filteroption}&startDate=${startDate}&endDate=${endDate}`;
+      console.log(url);
+      $.ajax({
+        url: url,
+        method: "GET",
+        beforeSend: function () {
+          $("tbody").empty();
+          $("tbody").html('<div id="loader" class="loader-style"><img src="/images/spinning.gif" /></div>');
+        },
+        complete: function () {
+          $("#loader").hide();
+        },
+        success: function (response) {
+          $("tbody").html(response);
+          // $("tbody").show();
+        },
+        error: function (err) {
+          $("tbody").html(err);
+        }
+      })
+    }
+  </script>
+  <%- include("partials/footer"); -%>

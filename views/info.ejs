@@ -1,0 +1,69 @@
+<%- include("partials/header"); -%>
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Info</th>
+            </tr>
+            <tr>
+                <td>Total Scans Completed: </td>
+                <td>
+                    <%= decryptedCounter %>
+                </td>
+            </tr>
+            <tr>
+                <td>Maximum Scans</td>
+                <td>
+                    <%= maximumScans %>
+                </td>
+            </tr>
+            <tr>
+                <td>Registered Devices</td>
+                <td>
+                    <%= RegisteredDevices %>
+                </td>
+            </tr>
+            <tr>
+                <td>License Valid Till</td>
+                <td>
+                    <% if (trialDate.includes("XX")){ %>
+                        Perpetual
+                        <% }else{ %>
+                            <%= trialDate %>
+                                <% } %>
+
+                </td>
+            </tr>
+            <tr>
+                <td>Maximum Devices (with license)</td>
+                <td>
+                    <%= maximumDevices %>
+                </td>
+            </tr>
+        </thead>
+    </table>
+    <script src="text/javascript">
+
+    </script>
+
+    <script text="type/javascript">
+        $(async function() {
+            const response = await httpGetRequest("https://localhost/Regula.SDK.Api/Methods/CheckReaderResultJSON?AType=31&AIdx=0");
+
+            const {SDKVersion,DeviceType,DeviceNumber,DeviceLabelNumber} = response.Info;
+            const {ValidUntil} = response.DeviceInfo;
+            const object = {SDKVersion:SDKVersion, DeviceType:DeviceType, DeviceNumber:DeviceNumber, DeviceLabelNumber:DeviceLabelNumber, ValidUntil: new Date(ValidUntil).toLocaleString()};
+            
+            for (var i=0; i<Object.keys(object).length; i++){
+                $(".table").append(
+                `<tr>
+                    <td>${ Object.keys(object)[i] }</td>
+                    <td>${object[Object.keys(object)[i]]}</td>
+                <tr>`
+            )
+        }
+
+        })
+
+    </script>
+    <%- include("partials/footer"); -%>

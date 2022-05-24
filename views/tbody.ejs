@@ -1,0 +1,74 @@
+<% for (var i=found.length-1 ;i>=0 ; i--){ %>
+  <tr>
+    <td>
+      <%= found.length-i %>
+    </td>
+    <td>
+      <%= found[i].employeeId %>
+    </td>
+    <td>
+      <%= found[i].nameOfEmployee %>
+    </td>
+    <td>
+      <%= found[i].documentClass %>
+    </td>
+    <td>
+      <%= found[i].created_at.toString().slice(0,24) %>
+    </td>
+
+    <td>
+      <form action="<%- /views/ + found[i]._id -%>" method="GET">
+        <button class="btn btn-success shadow-none" type="submit">View</button>
+      </form>
+    </td>
+
+    <td>
+      <button name='delete' value="<%- found[i]._id -%>" class="btn btn-danger shadow-none"
+        type="submit">Delete</button>
+    </td>
+
+    <td>
+      <button value="<%- found[i]._id -%>" class="export btn btn-primary shadow-none">Export</button>
+    </td>
+  </tr>
+  <% } %>
+
+    <script type="text/javascript">
+      $("button[name='delete']").on("click", function () {
+        if (confirm('Are you sure you want to delete this item?')) {
+          $.ajax({
+            url: "/records/" + String(this.value),
+            type: "application/json",
+            method: "DELETE",
+            complete: function () {
+              console.log('Connected..')
+            },
+            success: function (result) {
+              window.location.href = window.location.href;
+              console.log(result);
+            },
+            error: function (error) {
+              console.log(error);
+            }
+          })
+        } else {
+          return
+        }
+      })
+
+
+      $(".export").on("click", function () {
+        const url = "/export_record/" + this.value;
+        $.ajax({
+          url: url,
+          type: "application/json",
+          processData: false,
+          contentType: false,
+          method: "GET",
+          success: function (res) {
+            window.open(url);
+            // console.log(res);
+          }
+        })
+      });
+    </script>

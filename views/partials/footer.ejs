@@ -1,0 +1,15 @@
+</section>
+</body>
+<script type="text/javascript">
+
+    setInterval(checkRegulaStatus,1000); //Checks for the Regula Service Status every 1second
+
+    $("#regulaServiceStatus").on("click", function () {
+        $(this).fadeOut(100).fadeIn(100).fadeOut(100).fadeIn(100);
+        checkRegulaStatus();
+    });
+
+    // setInterval(checkNetworkStatus,1000);
+</script>
+
+</html>

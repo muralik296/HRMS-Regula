@@ -1,0 +1,1552 @@
+<%- include("partials/header"); -%>
+    <style>
+
+        #lexTable img{
+            height: 24px;
+            width: 24px;
+        }
+
+        #securityTable .validityInd {
+            width: 24px;
+            height: 24px;
+        }
+
+        #securityTable td {
+            width: 50%;
+        }
+
+        #securityTable img {
+            width: 50%;
+        }
+
+        #graphicsTable img {
+            width: 200px;
+        }
+
+        #preview {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .lexMrzRfid,
+        .lexMrzBarcode,
+        .lexMrzVisual,
+        .lexRfidBarcode,
+        .lexRfidVisual,
+        .lexBarcodeVisual,
+        .lextotal {
+            width: 50px;
+        }
+
+        .lexMrz,
+        .lexRfid,
+        .lexBarcode,
+        .lexVisualOcr {
+            width: 100px;
+        }
+
+        .lexMrz:hover,
+        .lexRfid:hover,
+        .lexBarcode:hover,
+        .lexVisualOcr:hover {
+            background-color: #89CFF0;
+        }
+
+        .fieldName {
+            width: 50px;
+        }
+
+
+        /* Stats Table */
+        .simpleTable {
+            border-collapse: collapse;
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            word-wrap: break-word;
+            font-size: small;
+            text-align: center;
+        }
+
+        /* .simpleTable td {
+            border-style: solid;
+            border-width: 1px;
+            border-color: black;
+        } */
+
+        .simpleTable img {
+            width: 24px;
+            height: 24px;
+        }
+    </style>
+    <script src="Scripts/jquery-2.2.0.min.js"></script>
+    <script src="Scripts/jquery-ui.min.js"></script>
+    <script src="Scripts/jquery.cookie-1.4.1.min.js"></script>
+    <script src="Scripts/regula.sdk.strings.js"></script>
+    <script src="Scripts/regula.sdk.enums.js"></script>
+    <script src="Scripts/regula.sdk.utils.js"></script>
+    <script src="Scripts/socket.io.js"></script>
+    <script src="Scripts/bs64.js"></script>
+    <script src="Custom Scripts/utils.js"></script>
+
+
+    <input class="btn btn-sm btn-primary shadow-none" name="ScannedImages" type="button" data-translate="aProcessImages"
+        onclick="GetImages()" value="Process images">
+
+    <div id="loader" class="loader-style">
+        <img src="/images/spinning.gif" />
+    </div>
+
+    <section id="preview">
+
+        <div class="row">
+
+            <div class="col-lg-3">
+                <!-- Main Photos -->
+                <div id="photosLayout"></div>
+            </div>
+
+            <div class="col-lg-9">
+
+                <div id="message"></div>
+
+                <!-- Overall statuses -->
+                <div style="width: 100%">
+                    <table class="simpleTable">
+                        <tr>
+                            <td data-translate="strOverallResult"></td>
+                            <td>
+                                <img id="summmaryStat" />
+                            </td>
+
+                            <td data-translate="strMRZ"></td>
+                            <td>
+                                <img id="mrzStat" />
+                            </td>
+
+                            <td data-translate="strRecognizedDocumentType"></td>
+                            <td>
+                                <img id="docTypeStat" />
+                            </td>
+
+                            <td data-translate="strTextComparison"></td>
+                            <td>
+                                <img id="lexicalStat" />
+                            </td>
+
+                            <td data-translate="strSecurityFeatures"></td>
+                            <td>
+                                <img id="securityStat" />
+                            </td>
+
+                            <td data-translate="strRFID"></td>
+                            <td>
+                                <img id="rfidStat" />
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <br />
+
+                <!-- Employee Information -->
+                <form id="employeeInformation" action="/" method="post" onsubmit="save(event)">
+                    <div id="userFields" class="row">
+                        <div class="col-sm-4">
+                            <input class="form-control" type="text" name="nameOfEmployee" placeholder="Enter Name"
+                                autocomplete="off" required>
+                        </div>
+                        <div class="col-sm-4">
+                            <input class="form-control" type="number" name="employeeId" min="1"
+                                placeholder="Enter Employee ID" autocomplete="off" required>
+                        </div>
+                        <div class="col-sm-4">
+                            <button class="btn btn-info" type="submit" name="Save">Save Record</button>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-4">
+                        <label for="Document Class">Document Class</label>
+                        <input class="form-control" type="text" name="Document Class" readonly />
+                        <label for="Document Type">Document Type</label>
+                        <input class="form-control" type="text" name="Document Type" readonly />
+                    </div>
+                </form>
+
+
+                <br />
+                <!--Results -->
+                <!-- Tabs navs -->
+                <ul class="nav nav-tabs mb-3" id="ex1" role="tablist">
+
+                    <!-- Text Data -->
+
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link active" id="ex1-tab-1" data-bs-toggle="tab" href="#ex1-tabs-1" role="tab"
+                            aria-controls="ex1-tabs-1" aria-selected="true">Text Data Comparison</a>
+                    </li>
+
+                    <!-- Security -->
+
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" id="ex1-tab-2" data-bs-toggle="tab" href="#ex1-tabs-2" role="tab"
+                            aria-controls="ex1-tabs-2" aria-selected="false">Security</a>
+                    </li>
+
+                    <!-- Graphic Fields -->
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" id="ex1-tab-3" data-bs-toggle="tab" href="#ex1-tabs-3" role="tab"
+                            aria-controls="ex1-tabs-3" aria-selected="false">Graphic Images</a>
+                    </li>
+
+                    <!-- RFID (Binary) Data -->
+
+                    <!-- <li class="nav-item" role="presentation">
+                        <a class="nav-link" id="ex1-tabs-4" data-bs-toggle="tab" href="#ex1-tabs-4" role="tab"
+                            aria-controls="ex1-tabs-4" aria-selected="false">RFID (Binary Data)</a>
+                    </li> -->
+
+                    <!-- Barcode Data -->
+
+                    <!-- <li class="nav-item" role="presentation">
+                        <a class="nav-link" id="ex1-tab-5" data-bs-toggle="tab" href="#ex1-tabs-5" role="tab"
+                            aria-controls="ex1-tabs-5" aria-selected="false">Barcode</a>
+                    </li> -->
+
+                    <!-- Comparison of portraits -->
+
+                    <!-- <li class="nav-item" role="presentation">
+                        <a class="nav-link" id="ex1-tab-6" data-bs-toggle="tab" href="#ex1-tabs-6" role="tab"
+                            aria-controls="ex1-tabs-6" aria-selected="false">Comparison of the portraits</a>
+                    </li> -->
+                </ul>
+                <!-- Tabs navs -->
+
+                <!-- Tabs content -->
+                <div class="tab-content" id="ex1-content">
+                    <div class="tab-pane fade show active" id="ex1-tabs-1" role="tabpanel" aria-labelledby="ex1-tab-1">
+                        <table id="lexTable" class="table table-hover">
+                            <thead>
+
+                                <tr>
+                                    <th class="fieldName">Field type</th>
+                                    <th class="lexMrz" style="display: none;">MRZ</th>
+                                    <th class="lexRfid" style="display: none;">RFID chip</th>
+                                    <th class="lexBarcode" style="display: none;">Barcode</th>
+                                    <th class="lexVisualOcr" style="display: none;">Visual</th>
+                                    <th class="lexMrzRfid" style="display: none;">MRZ-RFID</th>
+                                    <th class="lexMrzBarcode" style="display: none;">MRZ-B</th>
+                                    <th class="lexMrzVisual" style="display: none;">MRZ-V</th>
+                                    <th class="lexRfidBarcode" style="display: none;">RFID-B</th>
+                                    <th class="lexRfidVisual" style="display: none;">RFID-V</th>
+                                    <th class="lexBarcodeVisual" style="display: none;">B-V</th>
+                                    <th class="lextotal">Valid</th>
+                                    <th>Effective</th>
+                                </tr>
+
+                            </thead>
+                            <tbody>
+
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="tab-pane fade" id="ex1-tabs-2" role="tabpanel" aria-labelledby="ex1-tab-2">
+                        <table id="securityTable" class="results_table tabcontent">
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="tab-pane fade" id="ex1-tabs-3" role="tabpanel" aria-labelledby="ex1-tab-3">
+                        <table id="graphicsTable" class="tabcontent">
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <table id="visualGraphics" class="results_table">
+                                            <thead>
+                                                <tr>
+                                                    <th colspan="2" data-translate="strVisualZone" />
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>
+                                        <table id="rfidGraphics" class="results_table">
+                                            <thead>
+                                                <tr>
+                                                    <th colspan="2" data-translate="strRFID" />
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="tab-pane fade" id="ex1-tabs-4" role="tabpanel" aria-labelledby="ex1-tabs-4">
+                        <table id="rfidBinaryTable" class="tabcontent">
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <table id="rfidTable" class="results_table">
+                                            <thead>
+                                                <tr>
+                                                    <th colspan="2" data-translate="strChipInfo" />
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <table id="rfidNotifications" class="results_table">
+                                            <thead>
+                                                <tr>
+                                                    <th data-translate="strWarningsAndErrors" />
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <table id="rfidDataGroups" class="results_table">
+                                            <thead>
+                                                <tr>
+                                                    <th colspan="4" data-translate="strDatagroups" />
+                                                </tr>
+                                                <tr>
+                                                    <th data-translate="strType" />
+                                                    <th data-translate="strStatus" />
+                                                    <th data-translate="strTime" />
+                                                    <th data-translate="strSize" />
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="tab-pane fade" id="ex1-tabs-5" role="tabpanel" aria-labelledby="ex1-tab-5">
+                        <table id="barcodeTable" class="results_table tabcontent">
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="tab-pane fade" id="ex1-tabs-6" role="tabpanel" aria-labelledby="ex1-tab-6">
+                        <table id="faceComparisonTable" class="results_table tabcontent">
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                </div>
+                <!-- Tabs content -->
+            </div>
+
+        </div>
+
+
+
+
+    </section>
+
+
+
+
+
+    <script type="text/javascript">
+
+        let customMap = JSON.parse(`<%- customMap -%>`);
+
+        let document_type, document_class, regulaDeviceId;
+
+        let arrayOfImages = [];
+        let graphicImages = {};
+
+        var noFields = (`<%- noFields -%>`).split(",");
+        var url = "https://localhost:443/Regula.SDK.Api";
+
+        var script = document.createElement('script');
+        if (navigator.userAgent.indexOf("Win") != -1 ||
+            navigator.userAgent.indexOf("WOW64") != -1) {
+            script.setAttribute('src', 'Scripts/regula.sdk.apiClient.js');
+
+        } else {
+            script.setAttribute('src', 'Scripts/regula.sdk.socketsClient.js');
+        }
+        script.type = 'text/javascript';
+        script.onload = function () {
+            //Getting everything ready
+            initRegulaReader(url);
+        }
+        document.head.appendChild(script);
+
+        $(function () {
+            setLang(languages.English);
+            // Clear();
+        });
+
+        OnProcessingStartedCallback = function () {
+            Clear();
+            $("#preview").hide();
+            $("#loader").show();
+        };
+
+        OnProcessingFinishedCallback = async function () {
+            $("#loader").hide();
+
+            // For Document Class and Document Type
+            const documentDescription = await httpGetRequest(`${url}/Methods/CheckReaderResultJSON?AType=9&AIdx=0`);
+
+            //For Regula Device Model
+            const response = await httpGetRequest("https://localhost/Regula.SDK.Api/Methods/CheckReaderResultJSON?AType=31&AIdx=0");
+
+            const { SDKVersion, DeviceType, DeviceNumber, DeviceLabelNumber } = response.Info;
+
+            regulaDeviceId = DeviceNumber;
+
+            //Document Class
+            document_class = documentDescription?.OneCandidate?.FDSIDList?.dDescription || 'Others'; //Document Class e.g. Resident Identity Card
+
+            //Document Type
+            document_type = documentDescription?.OneCandidate?.DocumentName;
+
+            $("input[name='Document Class']").val(document_class);
+            $("input[name='Document Type']").val(document_type);
+            getLastResults();
+        };
+
+        function getLastResults() {
+            //Getting scanned images
+            IsReaderResultTypeAvailable(eRPRM_ResultType.RPRM_ResultType_RawImage, function (count) {
+                if (count > 0) {
+                    GetPropertyValue("PagesCount", function (pages) {
+                        for (var page = 0; page < pages; page++) {
+                            for (var light in eRPRM_Lights) {
+                                // eRPRM_Lights[light]
+                                GetReaderFileImageByLightIndexAndPageIndex(eRPRM_Lights[light], page, function (data) {
+                                    if (data != null) {
+                                        arrayOfImages.push(data);
+                                        $("#photosLayout").append(
+
+                                            $('<img>').attr('src', "data:image/png;base64," + data)
+                                                .addClass('docImg')
+                                                .click(function () {
+                                                    showDialog("data:image/png;base64," + data);
+                                                })
+                                        );
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+
+            //Getting text results comparison
+            IsReaderResultTypeAvailable(eRPRM_ResultType.RPRM_ResultType_OCRLexicalAnalyze, function (count) {
+                if (count > 0) {
+                    $("#lexTabBtn").show();
+                }
+
+                for (var i = 0; i < count; i++) {
+                    CheckReaderResultXML(eRPRM_ResultType.RPRM_ResultType_OCRLexicalAnalyze, i, 0, function (data) {
+                        ParseLexicalData(data);
+                    });
+                }
+            });
+
+
+
+            //Getting security features
+            IsReaderResultTypeAvailable(eRPRM_ResultType.RPRM_ResultType_Authenticity, function (securityCount) {
+                var securityArray = new Array(securityCount);
+                var gotSecurityResults = 0;
+                for (var i = 0; i < securityCount; i++) {
+                    CheckReaderResultXML(eRPRM_ResultType.RPRM_ResultType_Authenticity, i, 0, function (data, type, index) {
+
+                        gotSecurityResults += 1;
+                        securityArray[index] = data;
+
+                        if (gotSecurityResults == securityCount) {
+
+                            for (var k = 0; k < securityCount; k++) {
+                                $xmlDoc = $($.parseXML(securityArray[k]));
+                                var properIndex = $xmlDoc.find("PageIndex").get(0).textContent;
+                                var pageText = GetTranslation('strPage') + " " + (k + 1);
+                                if (properIndex == 255) {
+                                    pageText = GetTranslation('strWholeDocument');
+                                }
+
+                                if (securityCount > 1) {
+                                    //we're dealing with multiple page scan here
+
+                                    if (k == 0) {
+                                        $("#securityTable").find('tbody')
+                                            .append($('<tr>').append($('<th>')
+                                                .text(pageText)
+                                                .attr('colspan', 10)
+                                            ).addClass('pageSeparator')
+                                            );
+                                    } else {
+                                        $("#securityTable").find('tbody')
+                                            .append($('<tr>').attr('colspan', 10).addClass('pageSeparatorEmpty'))
+                                            .append($('<tr>').append($('<th>')
+                                                .text(pageText)
+                                                .attr('colspan', 10)
+                                            ).addClass('pageSeparator')
+                                            );
+                                    }
+                                }
+
+                                ParseSecurityData($xmlDoc);
+                            }
+
+                            $("#securityTabBtn").show();
+                        }
+                    });
+                }
+            });
+
+            // Graphics Data
+
+            IsReaderResultTypeAvailable(eRPRM_ResultType.RPRM_ResultType_Graphics, function (count) {
+                if (count > 0) {
+                    $("#graphicsTabBtn").show();
+                }
+
+                for (var i = 0; i < count; i++) {
+                    CheckReaderResultXML(eRPRM_ResultType.RPRM_ResultType_Graphics, i, 0, function (data) {
+                        ParseGraphics(data, false);
+                    });
+                }
+            });
+
+            // Barcode Binary Data
+
+            IsReaderResultTypeAvailable(eRPRM_ResultType.RPRM_ResultType_BarCodes, function (count) {
+                if (count > 0) {
+                    $("#barcodeTabBtn").show();
+                }
+
+                for (var i = 0; i < count; i++) {
+                    CheckReaderResultXML(eRPRM_ResultType.RPRM_ResultType_BarCodes, i, 0, function (data) {
+                        ParseBarcodeBinaryData(data);
+                    });
+                }
+            });
+
+
+            CheckRFIDResultXML(eRFID_ResultType.RFID_ResultType_RFID_ImageData, 0, function (data) {
+                if (data != null) {
+                    $("#graphicsTabBtn").show();
+                    ParseGraphics(data, true);
+                }
+            });
+
+            //Getting RFID technical data
+            GetPropertyValue('ChipWasDetected', function (data) {
+                if (data) {
+                    ParseRFIDChipData();
+                    GetRfidSummary();
+                    $("#rfidBtn").show();
+                }
+            });
+
+            IsReaderResultTypeAvailable(eRPRM_ResultType.RPRM_ResultType_Portrait_Comparison, function (count) {
+                if (count > 0) {
+                    $("#faceMatchTabBtn").show();
+                }
+
+                for (var i = 0; i < count; i++) {
+                    CheckReaderResultXML(eRPRM_ResultType.RPRM_ResultType_Portrait_Comparison, i, 0, function (data) {
+                        ParseLivenessData(data);
+                    });
+                }
+            });
+            
+            GetStatuses();
+            $("#preview").show()
+        }
+
+        function ParseLexicalData(data) {
+            $xmlDoc = $($.parseXML(data));
+
+            var hasMrz = 0, hasRfis = 0, hasBarcode = 0, hasVisual = 0;
+
+            $xmlDoc.find("Document_Field_Analysis_Info").each(function (key, element) {
+                var fieldType = GetTranslation(getFromEnum(eVisualFieldTypeStrings, $(element).children("Type")[0].textContent));
+                var lcid = $(element).children("LCID")[0].textContent;
+                if (lcid != 0)
+                    fieldType = fieldType + " (" + lcid + ")";
+
+
+                var mrz = $(element).children("Field_MRZ")[0].textContent;
+                var rfid = $(element).children("Field_RFID")[0].textContent;
+                var barcode = $(element).children("Field_Barcode")[0].textContent;
+                var visual = $(element).children("Field_Visual")[0].textContent;
+
+                const mrzStat = $(element).children("Matrix1")[0].textContent;;
+                const rfidStat = $(element).children("Matrix2")[0].textContent;
+                const barcodeStat = $(element).children("Matrix4")[0].textContent;
+                const visualStat = $(element).children("Matrix3")[0].textContent;
+                const mrzRfid = $(element).children("Matrix5")[0].textContent;
+                const mrzVisual = $(element).children("Matrix6")[0].textContent;
+                const mrzBarcode = $(element).children("Matrix7")[0].textContent;
+                const rfidVisual = $(element).children("Matrix8")[0].textContent;
+                const visualBarcode = $(element).children("Matrix9")[0].textContent;
+                const rfidBarcode = $(element).children("Matrix10")[0].textContent;
+
+                var mrzColor = mrzStat == eRPRM_FieldVerificationResult.RCF_Verified ? "Green" : mrzStat == eRPRM_FieldVerificationResult.RCF_Not_Verified ? "Red" : "Black";
+
+                var rfidColor = rfidStat == eRPRM_FieldVerificationResult.RCF_Verified ? "Green" : rfidStat == eRPRM_FieldVerificationResult.RCF_Not_Verified ? "Red" : "Black";
+
+                var barcodeColor = barcodeStat == eRPRM_FieldVerificationResult.RCF_Verified ? "Green" : barcodeStat == eRPRM_FieldVerificationResult.RCF_Not_Verified ? "Red" : "Black";
+
+                var visualColor = visualStat == eRPRM_FieldVerificationResult.RCF_Verified ? "Green" : visualStat == eRPRM_FieldVerificationResult.RCF_Not_Verified ? "Red" : "Black";
+
+                var mrzRfidColor = mrzRfid == eRPRM_FieldVerificationResult.RCF_Compare_True ? "Green" : mrzRfid == eRPRM_FieldVerificationResult.RCF_Compare_False ? "Red" : "Grey";
+
+                var mrzVisualColor = mrzVisual == eRPRM_FieldVerificationResult.RCF_Compare_True ? "Green" : mrzVisual == eRPRM_FieldVerificationResult.RCF_Compare_False ? "Red" : "Grey";
+
+                var mrzBarcodeColor = mrzBarcode == eRPRM_FieldVerificationResult.RCF_Compare_True ? "Green" : mrzBarcode == eRPRM_FieldVerificationResult.RCF_Compare_False ? "Red" : "Grey";
+
+                var rfidVisualColor = rfidVisual == eRPRM_FieldVerificationResult.RCF_Compare_True ? "Green" : rfidVisual == eRPRM_FieldVerificationResult.RCF_Compare_False ? "Red" : "Grey";
+
+                var visualBarcodeColor = visualBarcode == eRPRM_FieldVerificationResult.RCF_Compare_True ? "Green" : visualBarcode == eRPRM_FieldVerificationResult.RCF_Compare_False ? "Red" : "Grey";
+
+                var rfidBarcodeColor = rfidBarcode == eRPRM_FieldVerificationResult.RCF_Compare_True ? "Green" : rfidBarcode == eRPRM_FieldVerificationResult.RCF_Compare_False ? "Red" : "Grey";
+
+                let effectiveValue = rfid || barcode || visual || mrz;
+
+                effectiveValue = formatString(fieldType, effectiveValue, document_type);
+
+                //Custom Options
+                if (!(noFields.includes(fieldType))) {
+
+                    fieldType = formatFieldType(fieldType, customMap);
+
+                    const customClassNameForEffective = fieldType?.replace(/ /g, "_");
+
+                    $("#lexTable").find("tbody").append(
+                        $('<tr>').append($('<td>').text(fieldType),
+                            $(`<td onclick=changeEffectiveFieldValue(this)>`).text(mrz).addClass(`lexMrz ${customClassNameForEffective}`).css("color", mrzColor),
+                            $(`<td onclick=changeEffectiveFieldValue(this)>`).text(rfid).addClass(`lexRfid ${customClassNameForEffective}`).css("color", rfidColor),
+                            $(`<td onclick=changeEffectiveFieldValue(this)>`).text(barcode).addClass(`lexBarcode ${customClassNameForEffective}`).css("color", barcodeColor),
+                            $(`<td onclick=changeEffectiveFieldValue(this)>`).text(visual).addClass(`lexVisualOcr ${customClassNameForEffective}`).css("color", visualColor),
+                            $('<td>').addClass("lexMrzRfid").append($('<img>', { src: "/images/" + mrzRfidColor + ".png" }).addClass("validityInd")),
+                            $('<td>').addClass("lexMrzBarcode").append($('<img>', { src: "/images/" + mrzBarcodeColor + ".png" }).addClass("validityInd")),
+                            $('<td>').addClass("lexMrzVisual").append($('<img>', { src: "/images/" + mrzVisualColor + ".png" }).addClass("validityInd")),
+                            $('<td>').addClass("lexRfidBarcode").append($('<img>', { src: "/images/" + rfidBarcodeColor + ".png" }).addClass("validityInd")),
+                            $('<td>').addClass("lexRfidVisual").append($('<img>', { src: "/images/" + rfidVisualColor + ".png" }).addClass("validityInd")),
+                            $('<td>').addClass("lexBarcodeVisual").append($('<img>', { src: "/images/" + visualBarcodeColor + ".png" }).addClass("validityInd")),
+                            $('<td>').addClass("lextotal").addClass("validityInd"),
+                            $('<td>').append($(`<input class="form-control effective" name='${fieldType}' value='${effectiveValue}' />`))
+                        ));
+                }
+
+                if (mrz != "")
+                    hasMrz = 1;
+                if (rfid != "")
+                    hasRfis = 1;
+                if (barcode != "")
+                    hasBarcode = 1;
+                if (visual != "")
+                    hasVisual = 1;
+            })
+
+            if (hasMrz == 1)
+                $(".lexMrz").show();
+            if (hasRfis == 1)
+                $(".lexRfid").show();
+            if (hasBarcode == 1)
+                $(".lexBarcode").show();
+            if (hasVisual == 1)
+                $(".lexVisualOcr").show();
+
+            if (hasMrz == 1 && hasRfis == 1)
+                $(".lexMrzRfid").show();
+            if (hasMrz == 1 && hasVisual == 1)
+                $(".lexMrzVisual").show();
+            if (hasMrz == 1 && hasBarcode == 1)
+                $(".lexMrzBarcode").show();
+            if (hasVisual == 1 && hasRfis == 1)
+                $(".lexRfidVisual").show();
+            if (hasVisual == 1 && hasBarcode == 1)
+                $(".lexBarcodeVisual").show();
+            if (hasBarcode == 1 && hasRfis == 1)
+                $(".lexRfidBarcode").show();
+
+        }
+
+
+        //Security Data
+        function ParseSecurityData(xmlDoc) {
+
+            var authElements = $xmlDoc.find("Document_Authenticity");
+            var authCount = authElements.length;
+            for (var i = 0; i < authCount; i++) {
+                var element = authElements[i];
+
+
+                $(element).children().each(function (cKey, cElement) {
+
+                    var oneTable = $(document.createElement('table')).addClass('results_table');
+
+                    var securityHeader;
+                    switch (cElement.tagName) {
+                        case 'IR_B900':
+                            securityHeader = GetTranslation('strIRB900');
+                            break;
+                        case 'UV_Luminescence':
+                            securityHeader = GetTranslation('strUVLuminescence');
+                            break;
+                        case 'IR_Visibility':
+                            securityHeader = GetTranslation('strIRVis');
+                            break;
+                        case 'IPI':
+                            securityHeader = GetTranslation('strIpi');
+                            break;
+                        case 'IR_Luminescence':
+                            securityHeader = GetTranslation('strIRLuminescense');
+                            break;
+                        case 'IR_Photo':
+                            securityHeader = GetTranslation('strIRPhotoProtection');
+                            break;
+                        case 'PHOTO_EMBED_TYPE':
+                            securityHeader = GetTranslation('strPhotoEmbedType');
+                            break;
+                        case 'OCRSecurityText':
+                            securityHeader = GetTranslation('strSecurityText');
+                            break;
+                        case 'AxialProtection':
+                            securityHeader = GetTranslation('strAxialProtection');
+                            break;
+                        case 'ImagePattern':
+                            securityHeader = GetTranslation('strImagePattern');
+                            break;
+                        case 'OVI':
+                            securityHeader = GetTranslation('strOVICheck');
+                            break;
+                        case 'Portrait_Comparison':
+                            securityHeader = GetTranslation('strPortraitComparison');
+                            break;
+                        case 'UV_Fibers':
+                            securityHeader = GetTranslation('strUVFibers');
+                            break;
+                        case 'UV_Background':
+                            securityHeader = GetTranslation('strUVBackgroundComp');
+                            break;
+                        case 'Holograms':
+                            securityHeader = GetTranslation('strHolograms');
+                            break;
+                        case 'Photo_Area':
+                            securityHeader = GetTranslation('strPhotoArea');
+                            break;
+                        case 'BarcodeFormatCheck':
+                            securityHeader = GetTranslation('strBarcodeFormatCheck');
+                            break;
+                        default:
+                            securityHeader = '';
+                    }
+
+                    if ($(cElement).children("Result").length > 0) {
+                        var result = $(cElement).children("Result")[0].textContent;
+                        var indColor = result == eCheckResult.ch_Check_OK ? "Green" : result == eCheckResult.ch_Check_Error ? "Red" : "Grey";
+                        oneTable.append($('<thead>')
+                            .append($('<tr>')
+                                .append($('<th>').text(securityHeader))
+                                .append($('<th>').append($('<img>').attr('src', "images/" + indColor + ".png").addClass('validityInd')))
+                            )
+                        );
+                    } else {
+                        oneTable.append($('<thead>').append($('<tr>').append($('<th>').attr('colspan', 2).text(securityHeader))));
+                    }
+
+                    //var tbody = oneTable.find('tbody');
+
+                    $(cElement).find("OneElement").each(function (k, el) {
+
+                        var color = "#ededed";
+                        if (k % 2 == 0) {
+                            color = "#fcfcfc";
+                        }
+
+                        $(el).find("ElementType").each(function (i, e) {
+                            var result = -1;
+
+                            if ($(el).children("Result").length > 0) {
+                                result = $(el).children("Result")[i].textContent;
+                            } else if ($(el).children("CheckResult").length > 0) {
+                                result = $(el).children("CheckResult")[i].textContent;
+                            }
+
+                            var indColor = result == eCheckResult.ch_Check_OK ? "Green" : result == eCheckResult.ch_Check_Error ? "Red" : "Grey";
+
+                            oneTable.append($('<tr>').css('background-color', color).append(
+                                $('<td>').text(GetTranslation(getFromEnum(eRPRM_SecurityFeatureType, e.textContent))).css('font-weight', 'bold'),
+                                $('<td>').append($('<img>').attr('src', "images/" + indColor + ".png").addClass('validityInd'))
+                            ));
+                        });
+
+                        if (cElement.tagName != "UV_Luminescence") {
+                            $(el).find("Visibility").each(function (i, e) {
+                                var visibilityText = GetTranslation("strNotVisible");
+                                switch (e.textContent) {
+                                    case "0":
+                                        visibilityText = GetTranslation("strNotVisible");
+                                        break;
+                                    case "1":
+                                        visibilityText = GetTranslation("strVisible");
+                                        break;
+                                }
+                                oneTable.append($('<tr>').css('background-color', color).append(
+                                    $('<td>').text(GetTranslation('strExpected')),
+                                    $('<td>').text(visibilityText)
+                                ));
+                            });
+                        }
+
+                        $(el).find("PercentValue").each(function (i, e) {
+                            var result = -1;
+
+                            if ($(el).children("Result").length > 0) {
+                                result = $(el).children("Result")[i].textContent;
+                            } else if ($(el).children("CheckResult").length > 0) {
+                                result = $(el).children("CheckResult")[i].textContent;
+                            }
+
+                            var indColor = result == eCheckResult.ch_Check_OK ? "Green" : result == eCheckResult.ch_Check_Error ? "Red" : "Grey";
+
+                            var simPercent = GetTranslation('strSimilarity');
+                            if (e.textContent != "0") {
+                                simPercent += " (" + e.textContent + '%)';
+                            }
+
+                            oneTable.append($('<tr>').css('background-color', color).append(
+                                $('<td>').text(simPercent),
+                                $('<td>').append($('<img>').attr('src', "images/" + indColor + ".png").addClass('validityInd'))
+                            ));
+                        });
+
+                        var oneTypes = $(el).find("OneType");
+                        $(el).find("File_Image").each(function (i, e) {
+                            var type = "";
+                            if (oneTypes != null && oneTypes.length > 0)
+                                type = $(oneTypes)[i].textContent;
+
+                            oneTable.append($('<tr>').css('background-color', color).append(
+                                $('<td>').text(GetTranslation(getFromEnum(eGraphicFieldType, type))),
+                                $('<td>').append($('<img>').attr('src', "data:image/png;base64," + e.textContent))
+                            ));
+                        });
+
+                        $(el).find("Image Image").each(function (i, e) {
+                            oneTable.append($('<tr>').css('background-color', color).append(
+                                $('<td>').text(GetTranslation('strImage')),
+                                $('<td>').append($('<img>').attr('src', "data:image/png;base64," + e.textContent))
+                            ));
+                        });
+
+                        $(el).find("EtalonImage EtalonImage").each(function (i, e) {
+                            oneTable.append($('<tr>').css('background-color', color).append(
+                                $('<td>').text(GetTranslation('strEtalonImage')),
+                                $('<td>').append($('<img>').attr('src', "data:image/png;base64," + e.textContent))
+                            ));
+                        });
+
+                    });
+
+                    $(cElement).find("OneResult").each(function (k, el) {
+
+                        $(el).find("ResultCode").each(function (i, e) {
+                            var result = e.textContent;
+                            var indColor = result == eCheckResult.ch_Check_OK ? "Green" : result == eCheckResult.ch_Check_Error ? "Red" : "Grey";
+                            oneTable.append($('<tr>').append(
+                                $('<td>').text(GetTranslation('strVisible')),
+                                $('<td>').append($('<img>').attr('src', "images/" + indColor + ".png").addClass('validityInd'))
+                            ));
+                        });
+
+                        $(el).find("SecurityTextResultOCR").each(function (i, e) {
+                            oneTable.append($('<tr>').append(
+                                $('<td>').text(GetTranslation('strOCRText')),
+                                $('<td>').text(e.textContent)
+                            ));
+                        });
+
+                        $(el).find("EtalonResultOCR").each(function (i, e) {
+                            oneTable.append($('<tr>').append(
+                                $('<td>').text(GetTranslation('strSecurityText')),
+                                $('<td>').text(e.textContent)
+                            ));
+                        });
+                    });
+
+                    $(cElement).find("OneFiber").each(function (k, el) {
+
+                        var result = $(el).find('ErrorCode')[0].textContent;
+                        var indColor = result == eCheckResult.ch_Check_OK ? "Green" : result == eCheckResult.ch_Check_Error ? "Red" : "Grey";
+
+                        oneTable.append($('<tr>').append(
+                            $('<td>').text(GetTranslation("strResult")),
+                            $('<td>').append($('<img>').attr('src', "images/" + indColor + ".png").addClass('validityInd'))
+                        ));
+
+                        var r = $(el).find('ColorValues_1')[0].textContent;
+                        var g = $(el).find('ColorValues_2')[0].textContent;
+                        var b = $(el).find('ColorValues_3')[0].textContent;
+
+                        oneTable.append($('<tr>').append(
+                            $('<td>').text(GetTranslation('strColor')),
+                            $('<td>').css('background-color', "rgb(" + r + "," + g + "," + b + ")")
+                        ));
+
+                        var areas = $(el).find('Areas')[0];
+                        var count = $(areas).attr('Count');
+                        var expected = $(el).find('ExpectedCount')[0].textContent;
+
+                        oneTable.append($('<tr>').append(
+                            $('<td>').text(GetTranslation('strFound') + '(' + GetTranslation('strExpected') + ')'),
+                            $('<td>').text(count + '(' + expected + ')')
+                        ));
+                    });
+                    // .css('display', 'inline-table')
+                    $("#securityTable").find('tbody').css('display', 'block').append($('<tr>').append(oneTable));
+
+                });
+            }
+        }
+
+
+        function ParseGraphics(data, isRfid) {
+            $xmlDoc = $($.parseXML(data));
+
+            if (isRfid) {
+                $xmlDoc.find("RFID_Graphic_Field").each(function (key, element) {
+
+                    var color = "#ededed";
+                    if (key % 2 == 0) {
+                        color = "#fcfcfc";
+                    }
+
+                    var text = GetTranslation(getFromEnum(eGraphicFieldTypeStrings, element.getElementsByTagName("FieldType")[0].childNodes[0].nodeValue));
+                    var imgString = element.getElementsByTagName("File_Image")[0].getElementsByTagName("Data")[0].textContent;
+
+                    $("#rfidGraphics").find('tbody').append($('<tr>').css('background-color', color)
+                        .append($('<td>').text(text))
+                        .append($('<td>').append(($('<img>').attr('src', "data:image/png;base64," + imgString))))
+                    );
+                });
+            } else {
+                $xmlDoc.find("Document_Image").each(function (key, element) {
+                    var text = GetTranslation(getFromEnum(eGraphicFieldTypeStrings, element.getElementsByTagName("FieldType")[0].childNodes[0].nodeValue));
+                    var imgString = element.getElementsByTagName("File_Image")[0].textContent;
+
+                    graphicImages[text] = imgString
+
+                    var color = "#ededed";
+                    if (key % 2 == 0) {
+                        color = "#fcfcfc";
+                    }
+
+                    $("#visualGraphics").find('tbody').append($('<tr>').css('background-color', color)
+                        .append($('<td>').text(text))
+                        .append($('<td>').append(($('<img>').attr('src', "data:image/png;base64," + imgString))))
+                    );
+                });
+            }
+        }
+
+
+
+
+        function ParseBarcodeBinaryData(data) {
+            $xmlDoc = $($.parseXML(data));
+
+            $xmlDoc.find("Document_Barcode").each(function (key, element) {
+                var code = element.getElementsByTagName("bcCodeResult")[0].childNodes[0].nodeValue
+                if (code) {
+                    $("#barcodeTable").find('tbody')
+                        .append($('<tr>')
+                            .append($('<td>').text(GetTranslation("strResultCode")))
+                            .append($('<td>').append(GetTranslation(getFromEnum(eBarCodeResultCodesStrings, code)))));
+
+                }
+
+                var type = element.getElementsByTagName("bcType_DECODE")[0].childNodes[0].nodeValue
+                if (type) {
+                    $("#barcodeTable").find('tbody')
+                        .append($('<tr>')
+                            .append($('<td>').text(GetTranslation("strBarcodeType")))
+                            .append($('<td>').append(GetTranslation(getFromEnum(eBarcodeTypeStrings, type)))));
+                }
+
+                var modCount = element.getElementsByTagName("Modules")[0].getAttribute("Count")
+                if (modCount) {
+                    $("#barcodeTable").find('tbody')
+                        .append($('<tr>')
+                            .append($('<td>').text(GetTranslation("strBarcodeModuleCount")))
+                            .append($('<td>').append(modCount)));
+                }
+
+                $(element).find("Module").each(function (moduleKey, moduleElement) {
+                    var modType = moduleElement.getElementsByTagName("mType")[0].childNodes[0].nodeValue;
+                    var modLength = moduleElement.getAttribute("Length");
+
+                    var value = moduleElement.getElementsByTagName("Data")[0].childNodes[0].nodeValue;
+                    var arr = toByteArray(value);
+                    var finalValue = "";
+                    for (var z = 0; z < arr.length; z++) {
+                        finalValue += arr[z];
+                        finalValue += " ";
+                    }
+                    value = bin2String(finalValue);
+
+                    $("#barcodeTable").find('tbody')
+                        .append($('<tr>').append($('<td>').attr('colspan', 2)
+                            .append($('<table>')
+                                .append($('<thead>')
+                                    .append($('<tr>')
+                                        .append($('<th>').attr('colspan', 2).text(GetTranslation("strBarcodeModule")))))
+                                .append($('<tbody>')
+                                    .append($('<tr>')
+                                        .append($('<td>').text(GetTranslation("strBarcodeModuleType")))
+                                        .append($('<td>').append(GetTranslation(getFromEnum(eBarCodeModuleTypeStrings, modType)))))
+                                    .append($('<tr>')
+                                        .append($('<td>').text(GetTranslation("strBarcodeModuleLength")))
+                                        .append($('<td>').append(modLength)))
+                                    .append($('<tr>')
+                                        .append($('<td>').text(GetTranslation("strTextData")))
+                                        .append($('<td>').append(finalValue)
+                                            .append($('<br/>')).append($('<br/>'))
+                                            .append($('<span>').html(value)))))
+                            )
+                        )
+                        );
+                });
+            });
+
+            $("#barcodeTable").find("tbody").find("tr").each(function (key, element) {
+                var color = "#ededed";
+                if (key % 2 == 0) {
+                    color = "#fcfcfc";
+                }
+                $(element).css('background-color', color);
+            });
+        }
+
+
+
+
+        //Parsing RFID Chip Data
+        function ParseRFIDChipData() {
+            CheckRFIDResultXML(eRFID_ResultType.RFID_ResultType_RFID_BinaryData, 0, function (data) {
+                var $xmlDoc = $($.parseXML(data));
+
+                if ($xmlDoc.find("RFID_Type").length > 0) {
+                    var text = GetTranslation("strChipType");
+                    var value = $xmlDoc.find("RFID_Type")[0].childNodes[0].nodeValue;
+
+                    $("#rfidTable").find("tbody").append($('<tr>')
+                        .append($('<td>').text(text))
+                        .append($('<td>').text(value))
+                    );
+                }
+
+                if ($xmlDoc.find("Support_4").length > 0) {
+                    text = GetTranslation("strProtocol4");
+                    value = $xmlDoc.find("Support_4")[0].childNodes[0].nodeValue;
+
+                    value == "true" ? value = GetTranslation("strSupported") : GetTranslation("strNotSupported");
+
+                    $("#rfidTable").find("tbody").append($('<tr>')
+                        .append($('<td>').text(text))
+                        .append($('<td>').text(value))
+                    );
+                }
+
+                if ($xmlDoc.find("Baudrate2").length > 0) {
+                    text = GetTranslation("strRFIDSupportedBaudrates");
+                    value = $xmlDoc.find("Baudrate2")[0].childNodes[0].nodeValue;
+                    value = parseInt(value);
+
+                    var localized = "";
+                    if ((value & 1) > 0) {
+                        localized = GetTranslation("str106");
+                    }
+                    if ((value & 2) > 0) {
+                        localized += "/" + GetTranslation("str212");
+                    }
+                    if ((value & 4) > 0) {
+                        localized += "/" + GetTranslation("str424");
+                    }
+                    if ((value & 8) > 0) {
+                        localized += "/" + GetTranslation("str848");
+                    }
+
+                    $("#rfidTable").find("tbody").append($('<tr>')
+                        .append($('<td>').text(text))
+                        .append($('<td>').text(localized))
+                    );
+                }
+
+                if ($xmlDoc.find("BitRateR").length > 0) {
+                    text = GetTranslation("strRFIDEstablishedBaudrate");
+                    value = $xmlDoc.find("BitRateR")[0].childNodes[0].nodeValue;
+                    value = parseInt(value);
+                    switch (value) {
+                        case 1:
+                            value = GetTranslation("str106");
+                            break;
+                        case 2:
+                            value = GetTranslation("str212");
+                            break;
+                        case 4:
+                            value = GetTranslation("str424");
+                            break;
+                        case 8:
+                            value = GetTranslation("str848");
+                            break;
+                    }
+
+                    $("#rfidTable").find("tbody").append($('<tr>')
+                        .append($('<td>').text(text))
+                        .append($('<td>').text(value))
+                    );
+                }
+
+                if ($xmlDoc.find("UID").length > 0) {
+                    text = GetTranslation("UID");
+                    value = $xmlDoc.find("UID")[0].childNodes[0].nodeValue;
+
+                    $("#rfidTable").find("tbody").append($('<tr>')
+                        .append($('<td>').text(text))
+                        .append($('<td>').text(value))
+                    );
+                }
+
+                if ($xmlDoc.find("ATR").length > 0) {
+                    text = GetTranslation("ATR");
+                    value = $xmlDoc.find("ATR")[0].childNodes[0].nodeValue;
+
+                    $("#rfidTable").find("tbody").append($('<tr>')
+                        .append($('<td>').text(text))
+                        .append($('<td>').text(value))
+                    );
+                }
+
+                $("#rfidTable").find("tbody").find("tr").each(function (key, element) {
+                    var color = "#ededed";
+                    if (key % 2 == 0) {
+                        color = "#fcfcfc";
+                    }
+                    $(element).css('background-color', color);
+                });
+
+                var parsingNotifications = $xmlDoc.find("ParsingNotifications");
+                if (parsingNotifications != null && parsingNotifications.length > 0) {
+                    $("#rfidNotifications").css("display", "table");
+                    parsingNotifications.each(function (key, element) {
+                        var items = parsingNotifications[key].childNodes;
+                        for (var k = 0; k < items.length; k++) {
+                            var item = items[k];
+                            if (item != null) {
+                                var val = item.childNodes[0].nodeValue.split(" [")[0];
+                                var translation = GetTranslation(val);
+
+                                $("#rfidNotifications").find("tbody").append(
+                                    $('<tr>').append($('<td>').text(translation))
+                                );
+                            }
+                        }
+                    });
+                }
+
+                var notifications = $xmlDoc.find("Notifications");
+                if (notifications != null && notifications.length > 0) {
+                    $("#rfidNotifications").css("display", "table");
+                    for (var i = 0; i < notifications.length; i++) {
+                        var items = notifications[i].childNodes;
+                        for (var k = 0; k < items.length; k++) {
+                            var item = items[k];
+                            if (item != null) {
+                                var val = item.childNodes[0].nodeValue.split(" [")[0];
+                                var translation = GetTranslation(val);
+
+                                $("#rfidNotifications").find("tbody").append(
+                                    $('<tr>').append($('<td>').text(translation))
+                                );
+                            }
+                        }
+                    }
+                }
+
+                $("#rfidNotifications").find("tbody").find("tr").each(function (key, element) {
+                    var color = "#ededed";
+                    if (key % 2 == 0) {
+                        color = "#fcfcfc";
+                    }
+                    $(element).css('background-color', color);
+                });
+
+                if (GetPropertyValue('RFIDPassiveAuth', function (rfidPaStatus) {
+                    var tagName = "ReadingStatus";
+                    if (rfidPaStatus == true)
+                        tagName = "PA_Status";
+
+                    $xmlDoc.find('RFID_DataFile').each(function (key, element) {
+                        if ($(element).find('FileData').length > 0) {
+                            var status = $(element).find(tagName)[0].textContent;
+                            var type = $(element).find("Type")[0].childNodes[0].nodeValue;
+                            var image = "";
+
+                            if (status.indexOf("RFID_Error_NotAvailable") != -1) {
+                                $("#" + type).css("background-color", "Grey");
+                                image = "images/Grey.png";
+                            } else if (status.indexOf("RFID_Error_NoError") != -1) {
+                                $("#" + type).css("background-color", "DarkGreen");
+                                image = "images/Green.png";
+                            } else {
+                                $("#" + type).css("background-color", "Red");
+                                image = "images/Red.png";
+                            }
+
+                            $("#rfidDataGroups").find("tbody").append(
+                                $('<tr>')
+                                    .append($('<td>').text($(element).find('Type')[0].textContent))
+                                    .append($('<td>').append($('<img>').attr('src', image).addClass("validityInd")))
+                                    .append($('<td>').text($(element).find('ReadingTime')[0].textContent))
+                                    .append($('<td>').text($($(element).find('FileData')[0]).attr('Length'))));
+                        }
+                    });
+
+                    $("#rfidDataGroups").find("tbody").find("tr").each(function (key, element) {
+                        var color = "#ededed";
+                        if (key % 2 == 0) {
+                            color = "#fcfcfc";
+                        }
+                        $(element).css('background-color', color);
+                    });
+
+                }));
+
+            });
+        }
+
+        //RFID Summary
+
+        function GetRfidSummary() {
+            GetPropertyValue("CheckStatusRFIDBAC", function (result) {
+                if (result == null)
+                    $("#" + "BAC").css("background-color", "Grey");
+                else if (result == true)
+                    $("#" + "BAC").css("background-color", "DarkGreen");
+                else {
+                    $("#" + "BAC").css("background-color", "Red");
+                }
+            });
+
+            GetPropertyValue("CheckStatusRFIDPACE", function (result) {
+                if (result == null)
+                    $("#" + "PACE").css("background-color", "Grey");
+                else if (result == true)
+                    $("#" + "PACE").css("background-color", "DarkGreen");
+                else {
+                    $("#" + "PACE").css("background-color", "Red");
+                }
+            });
+
+            GetPropertyValue("CheckStatusRFIDCA", function (result) {
+                if (result == null)
+                    $("#" + "CA").css("background-color", "Grey");
+                else if (result == true)
+                    $("#" + "CA").css("background-color", "DarkGreen");
+                else {
+                    $("#" + "CA").css("background-color", "Red");
+                }
+            });
+
+            GetPropertyValue("CheckStatusRFIDTA", function (result) {
+                if (result == null)
+                    $("#" + "TA").css("background-color", "Grey");
+                else if (result == true)
+                    $("#" + "TA").css("background-color", "DarkGreen");
+                else {
+                    $("#" + "TA").css("background-color", "Red");
+                }
+            });
+
+            GetPropertyValue("CheckStatusRFIDAA", function (result) {
+                if (result == null)
+                    $("#" + "AA").css("background-color", "Grey");
+                else if (result == true)
+                    $("#" + "AA").css("background-color", "DarkGreen");
+                else {
+                    $("#" + "AA").css("background-color", "Red");
+                }
+            });
+
+            GetPropertyValue("CheckStatusRFIDPA", function (result) {
+                if (result == null)
+                    $("#" + "PA").css("background-color", "Grey");
+                else if (result == true)
+                    $("#" + "PA").css("background-color", "DarkGreen");
+                else {
+                    $("#" + "PA").css("background-color", "Red");
+                }
+            });
+        }
+
+        //Get Statuses
+        function GetStatuses() {
+            GetPropertyValue("CheckStatusComplete", function (result) {
+                if (result == null)
+                    $("#" + "summmaryStat").attr("src", "images/Grey.png");
+                else if (result == true)
+                    $("#" + "summmaryStat").attr("src", "images/Green.png");
+                else {
+                    $("#" + "summmaryStat").attr("src", "images/Red.png");
+                }
+            });
+
+            GetPropertyValue("CheckStatusMRZ", function (result) {
+                if (result == null)
+                    $("#" + "mrzStat").attr("src", "images/Grey.png");
+                else if (result == true)
+                    $("#" + "mrzStat").attr("src", "images/Green.png");
+                else {
+                    $("#" + "mrzStat").attr("src", "images/Red.png");
+                }
+            });
+
+            GetPropertyValue("IsDocumentRecognized", function (result) {
+                if (result == null)
+                    $("#" + "docTypeStat").attr("src", "images/Grey.png");
+                else if (result == true)
+                    $("#" + "docTypeStat").attr("src", "images/Green.png");
+                else {
+                    $("#" + "docTypeStat").attr("src", "images/Red.png");
+                }
+            });
+
+            GetPropertyValue("CheckStatusTextComparison", function (result) {
+                if (result == null)
+                    $("#" + "lexicalStat").attr("src", "images/Grey.png");
+                else if (result == true)
+                    $("#" + "lexicalStat").attr("src", "images/Green.png");
+                else {
+                    $("#" + "lexicalStat").attr("src", "images/Red.png");
+                }
+            });
+
+            GetPropertyValue("CheckStatusSecurity", function (result) {
+                if (result == null)
+                    $("#" + "securityStat").attr("src", "images/Grey.png");
+                else if (result == true)
+                    $("#" + "securityStat").attr("src", "images/Green.png");
+                else {
+                    $("#" + "securityStat").attr("src", "images/Red.png");
+                }
+            });
+
+            GetPropertyValue("CheckStatusRFID", function (result) {
+                if (result == null)
+                    $("#" + "rfidStat").attr("src", "images/Grey.png");
+                else if (result == true)
+                    $("#" + "rfidStat").attr("src", "images/Green.png");
+                else {
+                    $("#" + "rfidStat").attr("src", "images/Red.png");
+                }
+            });
+        }
+
+        //portrait comparison
+        function ParseLivenessData(data) {
+            $xmlDoc = $($.parseXML(data));
+
+            $xmlDoc.find("OneElement").each(function (key, element) {
+                var text = GetTranslation(getFromEnum(eRPRM_SecurityFeatureType, element.getElementsByTagName("ElementType")[0].childNodes[0].nodeValue));
+                var imgString = $(element).find("Image Image")[0].textContent;
+                var etalonString = $(element).find("EtalonImage EtalonImage")[0].textContent;
+
+                var result = -1;
+
+                if ($(element).children("Result").length > 0) {
+                    result = $(element).children("Result")[0].textContent;
+                } else if ($(element).children("CheckResult").length > 0) {
+                    result = $(element).children("CheckResult")[0].textContent;
+                }
+
+                var indColor = result == eCheckResult.ch_Check_OK ? "Green" : result == eCheckResult.ch_Check_Error ? "Red" : "Grey";
+
+                var color = "#ededed";
+                if (key % 2 == 0) {
+                    color = "#fcfcfc";
+                }
+
+                $("#faceComparisonTable").find('tbody')
+                    .append($('<tr>').css('background-color', color)
+                        .append($('<td>').text(text))
+                        .append($('<td>').append($('<img>').attr('src', "images/" + indColor + ".png").addClass('validityInd')))
+                    )
+                    .append($('<tr>').css('background-color', color)
+                        .append($('<td>').text(GetTranslation('strSimilarity')))
+                        .append($('<td>').text($(element).find("PercentValue")[0].textContent + '%')
+                        )
+                    )
+                    .append($('<tr>').css('background-color', color)
+                        .append($('<td>').text(GetTranslation('strImage')))
+                        .append($('<td>').append(($('<img>').attr('src', "data:image/png;base64," + imgString))))
+                    )
+                    .append($('<tr>').css('background-color', color)
+                        .append($('<td>').text(GetTranslation('strEtalonImage')))
+                        .append($('<td>').append(($('<img>').attr('src', "data:image/png;base64," + etalonString))))
+                    )
+            });
+        }
+
+
+        //Clearing all elements
+        // function Clear() {
+        //     $("#photosLayout").empty();
+        //     // $("#lexTable").empty();
+        //     $("#lexTable tbody > tr").remove();
+
+        // }
+
+        function Clear() {
+            $("#photosLayout").empty();
+
+            $("#employeeInformation").trigger("reset");
+
+            $(".tablinks").hide();
+
+            $("#lexTable tbody > tr").remove();
+
+            $("#securityTable tbody > tr").remove();
+
+            $("#rfidTable tbody > tr").remove();
+            $("#rfidNotifications tbody > tr").remove();
+            $("#rfidDataGroups tbody > tr").remove();
+
+            $("#visualGraphics tbody > tr").remove();
+            $("#rfidGraphics tbody > tr").remove();
+
+            $("#barcodeTable tbody > tr").remove();
+
+            $("#faceComparisonTable tbody > tr").remove();
+
+            $(".lexMrz").hide();
+            $(".lexRfid").hide();
+            $(".lexBarcode").hide();
+            $(".lexVisualOcr").hide();
+            $(".lexMrzRfid").hide();
+            $(".lexMrzVisual").hide();
+            $(".lexMrzBarcode").hide();
+            $(".lexRfidVisual").hide();
+            $(".lexBarcodeVisual").hide();
+            $(".lexRfidBarcode").hide();
+
+            $("#" + "BAC").css("background-color", "White");
+            $("#" + "PACE").css("background-color", "White");
+            $("#" + "TA").css("background-color", "White");
+            $("#" + "CA").css("background-color", "White");
+            $("#" + "AA").css("background-color", "White");
+            $("#" + "PA").css("background-color", "White");
+
+            $("#" + "dftPassport_DG1").css("background-color", "White");
+            $("#" + "dftPassport_DG2").css("background-color", "White");
+            $("#" + "dftPassport_DG3").css("background-color", "White");
+            $("#" + "dftPassport_DG4").css("background-color", "White");
+            $("#" + "dftPassport_DG5").css("background-color", "White");
+            $("#" + "dftPassport_DG6").css("background-color", "White");
+            $("#" + "dftPassport_DG7").css("background-color", "White");
+            $("#" + "dftPassport_DG8").css("background-color", "White");
+            $("#" + "dftPassport_DG9").css("background-color", "White");
+            $("#" + "dftPassport_DG10").css("background-color", "White");
+            $("#" + "dftPassport_DG11").css("background-color", "White");
+            $("#" + "dftPassport_DG12").css("background-color", "White");
+            $("#" + "dftPassport_DG13").css("background-color", "White");
+            $("#" + "dftPassport_DG14").css("background-color", "White");
+            $("#" + "dftPassport_DG15").css("background-color", "White");
+            $("#" + "dftPassport_DG16").css("background-color", "White");
+            $("#" + "dftPassport_COM").css("background-color", "White");
+            $("#" + "dftPassport_SOD").css("background-color", "White");
+            $("#" + "dftPassport_CVCA").css("background-color", "White");
+
+            $("#" + "summmaryStat").attr("src", "images/Grey.png");
+            $("#" + "mrzStat").attr("src", "images/Grey.png");
+            $("#" + "docTypeStat").attr("src", "images/Grey.png");
+            $("#" + "lexicalStat").attr("src", "images/Grey.png");
+            $("#" + "securityStat").attr("src", "images/Grey.png");
+            $("#" + "rfidStat").attr("src", "images/Grey.png");
+        }
+
+        function changeEffectiveFieldValue(obj) {
+            const element = $(obj);
+            const classList = element.attr("class").split(/\s+/);
+            const fieldName = classList[1].replaceAll("_", " ");
+            const inputField = $(`input[name='${fieldName}']`);
+            inputField.val(element.text());
+        }
+
+        function save(event) {
+            event.preventDefault();
+            // console.log(regulaDeviceId);
+            // console.log(arrayOfImages);
+            // console.log(graphicImages);
+            const nameOfEmployee = $("input[name='nameOfEmployee']").val();
+            const employeeId = $("input[name='employeeId']").val();
+
+            const outputData = {};
+
+            $(".effective").each(function (index, element) {
+                outputData[this.name] = this.value;
+            });
+
+            $.ajax({
+                url: "/records",
+                type: "application/json",
+                method: "POST",
+                dataType: "json",
+                data: {
+                    nameOfEmployee: nameOfEmployee,
+                    employeeId: employeeId,
+                    documentClass: document_class,
+                    documentType: document_type,
+                    details: JSON.stringify(outputData),
+                    regulaDeviceId: regulaDeviceId,
+                    graphicImages: graphicImages,
+                    images: arrayOfImages
+                },
+                beforeSend: function () {
+                    // $("#ScannedImages").empty();
+                    // $("#preview-table").empty();
+                    $("#loader").show();
+                },
+                success: function (result) {
+                    $("#loader").hide();
+                    $("#message").attr("class", "alert alert-success").fadeIn().text('Successfully saved record').show().fadeOut(500);
+                    Clear();
+                    setTimeout(function () { window.location.href = "/" }, 500)
+                },
+                error: function (err) {
+                    $("#loader").hide();
+                    $("#message").attr("class", "alert alert-danger").fadeIn().text(err.responseJSON.msg).show();
+                }
+            })
+        }
+
+    </script>
+    <%- include("partials/footer"); -%>
